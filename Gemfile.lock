@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    configure_trusted_publisher (0.1.4)
+    configure_trusted_publisher (0.1.5)
       bundler (~> 2.5)
       command_kit (~> 0.5.5)
 
