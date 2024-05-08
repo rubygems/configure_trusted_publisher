@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "rubygems"
+require "bundler/setup"
+
+require "rubygems/command_manager"
+require "rubygems/gem_runner"
+
+require "gem/release"
+require "gem/release/cmds/bump"
+
+class Gem::Release::Cmds::Bump # rubocop:disable Style/ClassAndModuleChildren
+  prepend(Module.new do
+    def commit
+      cmd "bundle install"
+      cmd :git_add, "Gemfile.lock"
+      super
+    end
+  end)
+end
+
+ARGV.unshift("bump")
+
+Gem::GemRunner.new.run(ARGV.clone)
