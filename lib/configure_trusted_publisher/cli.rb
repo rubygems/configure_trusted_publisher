@@ -5,6 +5,7 @@ require "command_kit/commands"
 require "command_kit/interactive"
 require "io/console"
 
+require "bundler"
 require "json"
 require "rubygems/gemcutter_utilities"
 
