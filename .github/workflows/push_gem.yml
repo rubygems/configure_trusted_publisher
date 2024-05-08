@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   push:
-    if: github.repository == "rubygems/configure_trusted_publisher"
+    if: 'github.repository == "rubygems/configure_trusted_publisher"'
     runs-on: ubuntu-latest
 
     permissions:

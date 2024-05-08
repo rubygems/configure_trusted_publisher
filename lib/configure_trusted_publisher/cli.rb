@@ -275,7 +275,7 @@ module ConfigureTrustedPublisher
 
             jobs:
               push:
-                if: github.repository == #{github_repository.join('/').inspect}
+                if: 'github.repository == "rubygems/configure_trusted_publisher"'
                 runs-on: ubuntu-latest
 
                 permissions:
@@ -320,7 +320,7 @@ module ConfigureTrustedPublisher
 
             jobs:
               push:
-                if: github.repository == #{github_repository.join('/').inspect}
+                if: 'github.repository == "rubygems/configure_trusted_publisher"'
                 runs-on: ubuntu-latest
 
                 permissions:
