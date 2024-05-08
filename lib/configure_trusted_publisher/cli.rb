@@ -244,6 +244,7 @@ module ConfigureTrustedPublisher
       def write_release_action(repository, rubygem_name)
         tag = "Automatically when a new tag matching v* is pushed"
         manual = "Manually by running a GitHub Action"
+        puts
         response = ask_multiple_choice(
           "How would you like releases for #{rubygem_name} to be triggered?", [
             tag,
@@ -355,6 +356,7 @@ module ConfigureTrustedPublisher
       def check_action(action_file)
         return FileUtils.mkdir_p(File.dirname(action_file)) || true unless File.exist?(action_file)
 
+        puts
         response = ask_multiple_choice(
           "#{action_file} already exists, overwrite?", { "y" => "Yes", "n" => "No" },
           default: "n"
