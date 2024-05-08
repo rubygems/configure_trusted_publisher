@@ -1,7 +1,9 @@
 name: Push Gem
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - v*
 
 permissions:
   contents: read
