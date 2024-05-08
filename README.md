@@ -1,6 +1,6 @@
 # ConfigureTrustedPublisher
 
-A small CLI to automate the process of configuring a trusted publisher for a gem.
+A small CLI to automate the process of configuring a [trusted publisher](https://guides.rubygems.org/trusted-publishing/) for a gem and [automating gem releases](https://guides.rubygems.org/trusted-publishing/releasing-gems/) with GitHub Actions!.
 
 ## Usage
 
@@ -9,6 +9,7 @@ To configure a trusted publisher for a gem, run the following command:
 ```console
 $ gem exec configure_trusted_publisher rubygem
 Configuring trusted publisher for rubygem0 in /Users/segiddins/Development/github.com/rubygems/configure_trusted_publisher for rubygems/configure_trusted_publisher
+
 Enter your https://rubygems.org credentials.
 Don't have an account yet? Create one at https://rubygems.org/sign_up
 Username/email: : gem-author
