@@ -3,7 +3,7 @@ name: Push Gem
 on:
   push:
     tags:
-      - v*
+      - 'v*'
 
 permissions:
   contents: read
@@ -12,6 +12,10 @@ jobs:
   push:
     if: github.repository == 'rubygems/configure_trusted_publisher'
     runs-on: ubuntu-latest
+
+    environment:
+      name: rubygems.org
+      url: https://rubygems.org/gems/configure_trusted_publisher
 
     permissions:
       contents: write

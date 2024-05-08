@@ -9,6 +9,7 @@ require "bundler"
 require "json"
 require "open3"
 require "rubygems/gemcutter_utilities"
+require "yaml"
 
 Gem.configuration.verbose = true
 
@@ -153,16 +154,25 @@ module ConfigureTrustedPublisher
         puts "Configuring trusted publisher for #{rubygem_name} in #{File.expand_path(repository)} for " \
              "#{github_repository.join('/')}"
 
+        write_release_action(repository, rubygem_name, environment: add_environment)
+
         gc = GemcutterUtilities.new(
           say: ->(msg) { puts msg },
-          ask: ->(msg) { ask msg.chomp(":") },
-          ask_for_password: ->(msg) { ask_secret msg.chomp(":") },
-          terminate_interaction: ->(msg) { exit msg },
+          ask: lambda { |msg|
+                 puts
+                 ask msg.chomp(":")
+               },
+          ask_for_password: lambda { |msg|
+                              puts
+                              ask_secret msg.chomp(":")
+                            },
+          terminate_interaction: lambda { |msg|
+                                   puts
+                                   exit msg
+                                 },
           otp: options[:otp]
         )
         gc.sign_in(scope: "configure_trusted_publishers") unless gc.api_key
-
-        write_release_action(repository, rubygem_name)
 
         owner, name = github_repository
         config = {
@@ -235,13 +245,46 @@ module ConfigureTrustedPublisher
         raise "No GitHub repository found for #{gemspec.name}"
       end
 
+      def add_environment
+        puts
+        return unless ask_yes_or_no("Would you like to add a github environment to allow customizing " \
+                                    "prerequisites for the action?")
+
+        env_name = "rubygems.org"
+
+        owner, name = github_repository
+        puts "Adding GitHub environment to #{owner}/#{name} to protect the action"
+        if (env = Open3.capture2e("gh", "api", "repos/#{owner}/#{name}/environments").then do |output, status|
+              exit "Failed to list environments for #{owner}/#{name} using `gh api`:\n#{output}" unless status.success?
+
+              JSON.parse(output)["environments"].find { |e| e["name"] == env_name }
+            end)
+
+          puts
+          puts "Environment 'rubygems.org' already exists for #{owner}/#{name}:\n  #{env['html_url']}"
+        else
+          Open3.capture2e("gh", "api", "--method", "PUT",
+                          "repos/#{owner}/#{name}/environments/#{env_name}").then do |output, status|
+            unless status.success?
+              exit "Failed to create rubygems.org environment for #{owner}/#{name} using `gh api`:\n#{output}"
+            end
+
+            env = JSON.parse(output)
+            puts
+            puts "Created environment 'rubygems.org' for #{owner}/#{name}:\n  #{env['html_url']}"
+          end
+        end
+
+        env_name
+      end
+
       attr_reader :gemspec_source
 
       def gemspec
         gemspec_source.specs.first
       end
 
-      def write_release_action(repository, rubygem_name)
+      def write_release_action(repository, rubygem_name, environment: nil)
         tag = "Automatically when a new tag matching v* is pushed"
         manual = "Manually by running a GitHub Action"
         puts
@@ -252,103 +295,50 @@ module ConfigureTrustedPublisher
           ],
           default: "2"
         )
-        case response
-        when tag
-          write_tag_action(repository)
-        when manual
-          write_manual_action(repository)
-        end
-      end
 
-      def write_tag_action(repository)
         action_file = File.expand_path(".github/workflows/push_gem.yml", repository)
         return unless check_action(action_file)
 
         File.write(
           action_file,
-          <<~YAML
-            name: Push Gem
-
-            on:
-              push:
-                tags:
-                  - v*
-
-            permissions:
-              contents: read
-
-            jobs:
-              push:
-                if: github.repository == '#{github_repository.join('/')}'
-                runs-on: ubuntu-latest
-
-                permissions:
-                  contents: write
-                  id-token: write
-
-                steps:
-                  # Set up
-                  - name: Harden Runner
-                    uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
-                    with:
-                      egress-policy: audit
-
-                  - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
-                  - name: Set up Ruby
-                    uses: ruby/setup-ruby@cacc9f1c0b3f4eb8a16a6bb0ed10897b43b9de49 # v1.176.0
-                    with:
-                      bundler-cache: true
-                      ruby-version: ruby
-
-                  # Release
-                  - uses: rubygems/release-gem@612653d273a73bdae1df8453e090060bb4db5f31 # v1
-          YAML
-        )
-        puts "Created #{action_file}"
-      end
-
-      def write_manual_action(repository)
-        action_file = File.expand_path(".github/workflows/push_gem.yml", repository)
-        return unless check_action(action_file)
-
-        File.write(
-          action_file,
-          <<~YAML
-            name: Push Gem
-
-            on:
-              workflow_dispatch:
-
-            permissions:
-              contents: read
-
-            jobs:
-              push:
-                if: github.repository == '#{github_repository.join('/')}'
-                runs-on: ubuntu-latest
-
-                permissions:
-                  contents: write
-                  id-token: write
-
-                steps:
-                  # Set up
-                  - name: Harden Runner
-                    uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
-                    with:
-                      egress-policy: audit
-
-                  - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
-                  - name: Set up Ruby
-                    uses: ruby/setup-ruby@cacc9f1c0b3f4eb8a16a6bb0ed10897b43b9de49 # v1.176.0
-                    with:
-                      bundler-cache: true
-                      ruby-version: ruby
-
-                  # Release
-                  - uses: rubygems/release-gem@612653d273a73bdae1df8453e090060bb4db5f31 # v1
-          YAML
-
+          [
+            "name: Push Gem",
+            nil,
+            "on:",
+            "  #{response == tag ? "push:\n    tags:\n      - 'v*'" : 'workflow_dispatch:'}",
+            nil,
+            "permissions:",
+            "  contents: read",
+            nil,
+            "jobs:",
+            "  push:",
+            "    if: github.repository == '#{github_repository.join('/')}'",
+            "    runs-on: ubuntu-latest",
+            if environment
+              "\n    environment:\n      name: #{environment}\n      url: https://rubygems.org/gems/#{rubygem_name}\n"
+            end,
+            "    permissions:",
+            "      contents: write",
+            "      id-token: write",
+            nil,
+            "    steps:",
+            "      # Set up",
+            "      - name: Harden Runner",
+            "        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1",
+            "        with:",
+            "          egress-policy: audit",
+            nil,
+            "      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4",
+            "      - name: Set up Ruby",
+            "        uses: ruby/setup-ruby@cacc9f1c0b3f4eb8a16a6bb0ed10897b43b9de49 # v1.176.0",
+            "        with:",
+            "          bundler-cache: true",
+            "          ruby-version: ruby",
+            nil,
+            "      # Release",
+            "      - uses: rubygems/release-gem@612653d273a73bdae1df8453e090060bb4db5f31 # v1",
+            nil
+          ].join("\n")
         )
         puts "Created #{action_file}"
       end
@@ -357,9 +347,9 @@ module ConfigureTrustedPublisher
         return FileUtils.mkdir_p(File.dirname(action_file)) || true unless File.exist?(action_file)
 
         puts
-        response = ask_multiple_choice(
-          "#{action_file} already exists, overwrite?", { "y" => "Yes", "n" => "No" },
-          default: "n"
+        response = ask_yes_or_no(
+          "#{action_file} already exists, overwrite?",
+          default: false
         )
         return if response == "No"
 
