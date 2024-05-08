@@ -7,6 +7,7 @@ require "io/console"
 
 require "bundler"
 require "json"
+require "open3"
 require "rubygems/gemcutter_utilities"
 
 Gem.configuration.verbose = true
@@ -143,9 +144,10 @@ module ConfigureTrustedPublisher
           rubygem_name = gemspec_source.specs.first.name
         end
 
-        unless system("rake", "release", "--dry-run", chdir: repository, exception: false, out: File::NULL,
-                                                      err: File::NULL)
-          abort "rake release is not configured for #{rubygem_name} in #{repository}"
+        Open3.capture2e("bundle", "exec", "rake", "release", "--dry-run", chdir: repository).then do |output, status|
+          unless status.success?
+            abort "bundle exec rake release is not configured for #{rubygem_name} in #{repository}:\n#{output}"
+          end
         end
 
         puts "Configuring trusted publisher for #{rubygem_name} in #{File.expand_path(repository)} for " \
