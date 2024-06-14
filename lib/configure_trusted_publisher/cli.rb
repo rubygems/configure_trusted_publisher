@@ -169,7 +169,7 @@ module ConfigureTrustedPublisher
                             },
           terminate_interaction: lambda { |msg|
                                    puts
-                                   exit msg
+                                   abort msg
                                  },
           otp: options[:otp]
         )
@@ -253,8 +253,8 @@ module ConfigureTrustedPublisher
                                     "prerequisites for the action?")
 
         if Bundler.which("gh").nil?
-          exit "The GitHub CLI (gh) is required to add a GitHub environment. " \
-               "Please install it from https://cli.github.com/ and try again."
+          abort "The GitHub CLI (gh) is required to add a GitHub environment. " \
+                "Please install it from https://cli.github.com/ and try again."
         end
 
         env_name = "rubygems.org"
@@ -262,7 +262,7 @@ module ConfigureTrustedPublisher
         owner, name = github_repository
         puts "Adding GitHub environment to #{owner}/#{name} to protect the action"
         if (env = Open3.capture2e("gh", "api", "repos/#{owner}/#{name}/environments").then do |output, status|
-              exit "Failed to list environments for #{owner}/#{name} using `gh api`:\n#{output}" unless status.success?
+              abort "Failed to list environments for #{owner}/#{name} using `gh api`:\n#{output}" unless status.success?
 
               JSON.parse(output)["environments"].find { |e| e["name"] == env_name }
             end)
@@ -273,7 +273,7 @@ module ConfigureTrustedPublisher
           Open3.capture2e("gh", "api", "--method", "PUT",
                           "repos/#{owner}/#{name}/environments/#{env_name}").then do |output, status|
             unless status.success?
-              exit "Failed to create rubygems.org environment for #{owner}/#{name} using `gh api`:\n#{output}"
+              abort "Failed to create rubygems.org environment for #{owner}/#{name} using `gh api`:\n#{output}"
             end
 
             env = JSON.parse(output)
