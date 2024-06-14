@@ -154,7 +154,8 @@ module ConfigureTrustedPublisher
         puts "Configuring trusted publisher for #{rubygem_name} in #{File.expand_path(repository)} for " \
              "#{github_repository.join('/')}"
 
-        write_release_action(repository, rubygem_name, environment: add_environment)
+        environment = add_environment
+        write_release_action(repository, rubygem_name, environment:)
 
         gc = GemcutterUtilities.new(
           say: ->(msg) { puts msg },
@@ -179,8 +180,9 @@ module ConfigureTrustedPublisher
           "trusted_publisher" => {
             "repository_name" => name,
             "repository_owner" => owner,
+            "environment" => environment,
             "workflow_filename" => "push_gem.yml"
-          },
+          }.compact,
           "trusted_publisher_type" => "OIDC::TrustedPublisher::GitHubAction"
         }
 
