@@ -252,6 +252,11 @@ module ConfigureTrustedPublisher
         return unless ask_yes_or_no("Would you like to add a github environment to allow customizing " \
                                     "prerequisites for the action?")
 
+        if Bundler.which("gh").nil?
+          exit "The GitHub CLI (gh) is required to add a GitHub environment. " \
+               "Please install it from https://cli.github.com/ and try again."
+        end
+
         env_name = "rubygems.org"
 
         owner, name = github_repository
