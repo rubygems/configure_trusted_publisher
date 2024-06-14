@@ -161,11 +161,11 @@ module ConfigureTrustedPublisher
           say: ->(msg) { puts msg },
           ask: lambda { |msg|
                  puts
-                 ask msg.chomp(":")
+                 ask msg.strip.chomp(":")
                },
           ask_for_password: lambda { |msg|
                               puts
-                              ask_secret msg.chomp(":")
+                              ask_secret msg.strip.chomp(":")
                             },
           terminate_interaction: lambda { |msg|
                                    puts
