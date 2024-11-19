@@ -36,4 +36,4 @@ jobs:
           ruby-version: ruby
 
       # Release
-      - uses: rubygems/release-gem@29c284620447a857040f93716ff7660e71cfc1de
+      - uses: rubygems/release-gem@segiddins/attest-by-default-when-using-trusted-publishing
