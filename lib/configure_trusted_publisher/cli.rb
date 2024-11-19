@@ -294,10 +294,12 @@ module ConfigureTrustedPublisher
       def write_release_action(repository, rubygem_name, environment: nil)
         tag = "Automatically when a new tag matching v* is pushed"
         manual = "Manually by running a GitHub Action"
+        release = "Automatically when a new GitHub release is published"
         puts
         response = ask_multiple_choice(
           "How would you like releases for #{rubygem_name} to be triggered?", [
             tag,
+            release,
             manual
           ],
           default: "2"
@@ -312,7 +314,12 @@ module ConfigureTrustedPublisher
             "name: Push Gem",
             nil,
             "on:",
-            "  #{response == tag ? "push:\n    tags:\n      - 'v*'" : 'workflow_dispatch:'}",
+            (case response
+             when tag then "    push:\n      tags:\n        - 'v*'"
+             when release then "    release:\n      types:\n        - published"
+             when manual then "    workflow_dispatch:"
+             else raise "Unknown response: #{response.inspect}"
+             end),
             nil,
             "permissions:",
             "  contents: read",
@@ -331,13 +338,13 @@ module ConfigureTrustedPublisher
             "    steps:",
             "      # Set up",
             "      - name: Harden Runner",
-            "        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1",
+            "        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2",
             "        with:",
             "          egress-policy: audit",
             nil,
-            "      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4",
+            "      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2",
             "      - name: Set up Ruby",
-            "        uses: ruby/setup-ruby@cacc9f1c0b3f4eb8a16a6bb0ed10897b43b9de49 # v1.176.0",
+            "        uses: ruby/setup-ruby@a2bbe5b1b236842c1cb7dd11e8e3b51e0a616acc # v1.202.0",
             "        with:",
             "          bundler-cache: true",
             "          ruby-version: ruby",
