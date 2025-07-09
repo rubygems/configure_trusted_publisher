@@ -240,7 +240,7 @@ module ConfigureTrustedPublisher
         ].each do |uri|
           next unless uri
 
-          if uri =~ %r{github.com[:/](?<owner>[^/]+)/(?<repo>[^/]+)}
+          if uri =~ %r{github\.com[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?}
             return Regexp.last_match[:owner], Regexp.last_match[:repo]
           end
         end
