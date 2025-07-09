@@ -363,11 +363,11 @@ module ConfigureTrustedPublisher
         return FileUtils.mkdir_p(File.dirname(action_file)) || true unless File.exist?(action_file)
 
         puts
-        response = ask_yes_or_no(
+        should_overwrite = ask_yes_or_no(
           "#{action_file} already exists, overwrite?",
           default: false
         )
-        return if response == "No"
+        return if should_overwrite == false
 
         true
       end
