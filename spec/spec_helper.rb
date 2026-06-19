@@ -2,6 +2,8 @@
 
 require "bundler/setup"
 require "configure_trusted_publisher"
+require "webmock/rspec"
+WebMock.disable_net_connect!
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
