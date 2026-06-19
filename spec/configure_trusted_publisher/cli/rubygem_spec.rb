@@ -65,6 +65,35 @@ RSpec.describe ConfigureTrustedPublisher::CLI::Rubygem do
     end
   end
 
+  context "when the gem already exists" do
+    let(:create_stub) do
+      stub_request(:post, "https://rubygems.org/api/v1/gems/existing-gem/trusted_publishers")
+        .to_return(status: 201, body: { id: 1 }.to_json, headers: { "Content-Type" => "application/json" })
+    end
+
+    before do
+      stub_request(:get, "https://rubygems.org/api/v1/gems/existing-gem/trusted_publishers")
+        .to_return(status: 200, body: "[]", headers: { "Content-Type" => "application/json" })
+      create_stub
+    end
+
+    it "POSTs to the gem endpoint" do
+      command.configure_publisher(gc, "existing-gem", config)
+      expect(create_stub).to have_been_requested
+    end
+
+    it "returns a message referencing the gem trusted publishers page" do
+      message = command.configure_publisher(gc, "existing-gem", config)
+      expect(message).to include("/gems/existing-gem/trusted_publishers")
+    end
+
+    it "never prompts the user" do
+      allow(command).to receive(:ask_yes_or_no).and_return(nil) # rubocop:disable RSpec/SubjectStub
+      command.configure_publisher(gc, "existing-gem", config)
+      expect(command).not_to have_received(:ask_yes_or_no) # rubocop:disable RSpec/SubjectStub
+    end
+  end
+
   context "when an equivalent pending publisher already exists" do
     before do
       allow(command).to receive(:ask_yes_or_no).and_return(true) # rubocop:disable RSpec/SubjectStub
