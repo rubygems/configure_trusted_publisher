@@ -186,49 +186,53 @@ module ConfigureTrustedPublisher
           "trusted_publisher_type" => "OIDC::TrustedPublisher::GitHubAction"
         }
 
-        gc.rubygems_api_request(
+        puts configure_publisher(gc, rubygem_name, config)
+      end
+
+      def configure_publisher(gem_client, rubygem_name, config)
+        resp = gem_client.rubygems_api_request(
           :get,
           "api/v1/gems/#{rubygem_name}/trusted_publishers",
           scope: "configure_trusted_publishers"
         ) do |req|
           req["Accept"] = "application/json"
-          req.add_field "Authorization", gc.api_key
-        end.then do |resp| # rubocop:disable Style/MultilineBlockChain
-          if resp.code != "200"
-            abort "Failed to get trusted publishers for #{rubygem_name} (#{resp.code.inspect}):\n#{resp.body}"
-          end
+          req.add_field "Authorization", gem_client.api_key
+        end
 
+        if resp.code == "200"
           existing = JSON.parse(resp.body)
-          if (e = existing.find do |pub|
-                config["trusted_publisher_type"] == pub["trusted_publisher_type"] &&
-                config["trusted_publisher"].all? do |k, v|
-                  pub["trusted_publisher"][k] == v
-                end
-              end)
-
+          if (e = existing.find { |pub| publisher_matches?(config, pub) })
             abort "Trusted publisher for #{rubygem_name} already configured for " \
                   "#{e.dig('trusted_publisher', 'name').inspect}"
           end
-        end
 
-        resp = gc.rubygems_api_request(
-          :post,
-          "api/v1/gems/#{rubygem_name}/trusted_publishers",
-          scope: "configure_trusted_publishers"
-        ) do |req|
-          req["Content-Type"] = "application/json"
-          req["Accept"] = "application/json"
-          req.add_field "Authorization", gc.api_key
+          create_resp = gem_client.rubygems_api_request(
+            :post,
+            "api/v1/gems/#{rubygem_name}/trusted_publishers",
+            scope: "configure_trusted_publishers"
+          ) do |req|
+            req["Content-Type"] = "application/json"
+            req["Accept"] = "application/json"
+            req.add_field "Authorization", gem_client.api_key
+            req.body = config.to_json
+          end
 
-          req.body = config.to_json
-        end
+          if create_resp.code == "201"
+            return "Successfully configured trusted publisher for #{rubygem_name}:\n  " \
+                   "#{gem_client.host}/gems/#{rubygem_name}/trusted_publishers"
+          end
 
-        if resp.code == "201"
-          puts "Successfully configured trusted publisher for #{rubygem_name}:\n  " \
-               "#{gc.host}/gems/#{rubygem_name}/trusted_publishers"
+          abort "Failed to configure trusted publisher for #{rubygem_name}:\n#{create_resp.body}"
+        elsif resp.code == "404"
+          configure_pending_publisher(gem_client, rubygem_name, config)
         else
-          abort "Failed to configure trusted publisher for #{rubygem_name}:\n#{resp.body}"
+          abort "Failed to get trusted publishers for #{rubygem_name} (#{resp.code.inspect}):\n#{resp.body}"
         end
+      end
+
+      def publisher_matches?(config, pub)
+        config["trusted_publisher_type"] == pub["trusted_publisher_type"] &&
+          config["trusted_publisher"].all? { |k, v| pub["trusted_publisher"][k] == v }
       end
 
       def github_repository
