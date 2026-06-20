@@ -146,4 +146,31 @@ RSpec.describe ConfigureTrustedPublisher::CLI::Rubygem do
       expect { command.configure_publisher(gc, "brand-new-gem", config) }.to raise_error(SystemExit)
     end
   end
+
+  context "when an existing pending publisher has no nested trusted_publisher" do
+    let(:create_stub) do
+      stub_request(:post, "https://rubygems.org/api/v1/oidc/pending_trusted_publishers")
+        .to_return(status: 201, body: { id: 1 }.to_json, headers: { "Content-Type" => "application/json" })
+    end
+
+    before do
+      allow(command).to receive(:ask_yes_or_no).and_return(true) # rubocop:disable RSpec/SubjectStub
+      stub_request(:get, "https://rubygems.org/api/v1/oidc/pending_trusted_publishers")
+        .to_return(status: 200,
+                   body: [{ "rubygem_name" => "brand-new-gem",
+                            "trusted_publisher_type" => "OIDC::TrustedPublisher::GitHubAction",
+                            "trusted_publisher" => nil }].to_json,
+                   headers: { "Content-Type" => "application/json" })
+      create_stub
+    end
+
+    it "does not crash on the malformed entry" do
+      expect { command.configure_publisher(gc, "brand-new-gem", config) }.not_to raise_error
+    end
+
+    it "proceeds to create the pending publisher" do
+      command.configure_publisher(gc, "brand-new-gem", config)
+      expect(create_stub).to have_been_requested
+    end
+  end
 end

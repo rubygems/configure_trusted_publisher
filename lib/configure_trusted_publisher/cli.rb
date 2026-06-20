@@ -274,8 +274,12 @@ module ConfigureTrustedPublisher
       end
 
       def publisher_matches?(config, pub)
-        config["trusted_publisher_type"] == pub["trusted_publisher_type"] &&
-          config["trusted_publisher"].all? { |k, v| pub["trusted_publisher"][k] == v }
+        return false unless config["trusted_publisher_type"] == pub["trusted_publisher_type"]
+
+        pub_attributes = pub["trusted_publisher"]
+        return false unless pub_attributes.is_a?(Hash)
+
+        config["trusted_publisher"].all? { |k, v| pub_attributes[k] == v }
       end
 
       def github_repository
