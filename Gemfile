@@ -15,4 +15,6 @@ gem "rubocop-rspec", "~> 2.29"
 
 gem "rspec", "~> 3.0"
 
+gem "webmock", "~> 3.0"
+
 gem "gem-release", "~> 2.2"
